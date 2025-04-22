@@ -3,7 +3,6 @@ name: Build and Publish Docker Image
 on:
   # Run on all pushes (no branch filter)
   push:
-    # Also run on version tags
     tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
@@ -16,23 +15,28 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        architecture: [amd64, arm64]
+
     permissions:
       contents: read
       packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Set up QEMU for multi-architecture support
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
-          platforms: 'arm64,arm,amd64,ppc64le,s390x'
+          platforms: 'all'
 
       # Setup Docker buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       # Extract version from package.json and prepare repository name
       - name: Extract version and prepare repository name
@@ -41,6 +45,11 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Extracted version: $VERSION"
+          
+          # Extract major version (e.g., "1" from "1.1.1")
+          MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_ENV
+          echo "Major version: $MAJOR_VERSION"
           
           # Convert repository name to lowercase for Docker compatibility
           REPO_LOWERCASE=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
@@ -57,13 +66,14 @@ jobs:
 
       # Build and push Docker image
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
+          platforms: linux/${{ matrix.architecture }}
           tags: |
             ghcr.io/${{ env.REPO_LOWERCASE }}:latest
             ghcr.io/${{ env.REPO_LOWERCASE }}:${{ env.VERSION }}
+            ghcr.io/${{ env.REPO_LOWERCASE }}:${{ env.MAJOR_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
