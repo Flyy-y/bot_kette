@@ -4,6 +4,3 @@ services:
     restart: unless-stopped
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
-    volumes:
-      - .:/app
-      - /app/node_modules
