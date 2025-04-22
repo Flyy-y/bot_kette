@@ -1,9 +1,9 @@
 name: Build and Publish Docker Image
 
 on:
+  # Run on all pushes (no branch filter)
   push:
-    branches: [ "main" ]
-    # Publish semver tags as releases
+    # Also run on version tags
     tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]

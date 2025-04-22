@@ -118,6 +118,12 @@ This repository includes a GitHub Actions workflow that automatically:
 2. Tags it with the version from package.json
 3. Publishes it to GitHub Container Registry (ghcr.io)
 
+The workflow runs on:
+- Every push to any branch
+- Pushes of version tags (v*.*.*)
+- Pull requests to the main branch
+- Manual triggering via the GitHub Actions UI
+
 The image will be available at `ghcr.io/Flyy-y/bot_kette:latest` and `ghcr.io/Flyy-y/bot_kette:1.0.0` (or whatever version is in package.json).
 
 ## License
