@@ -1,6 +1,6 @@
 {
-    "quoi": "feur",
-    "qui": "kette",
-    "toi": "lettes",
-    "oui": "stiti"
+    "quoi": {"answer": "feur", "on": "always"},
+    "qui": {"answer": "kette", "on": "always"},
+    "toi": {"answer": "lettes", "on": "always"},
+    "oui": {"answer": "stiti", "on": "always"}
 }

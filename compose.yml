@@ -1,6 +1,9 @@
 services:
   bot:
-    build: .
+    image: ghcr.io/Flyy-y/bot_kette:latest
+    # Alternatively, build locally:
+    # build: .
+    container_name: bot_kette
     restart: unless-stopped
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      - DISCORD_TOKEN=your_token_here
