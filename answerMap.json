@@ -1,10 +1,12 @@
 {
     "quoi": {"answer": ["feur", "feuse", "fure", "coubeh"], "on": "always"},
     "qui": {"answer": "kette", "on": "always"},
-    "toi": {"answer": "lettes", "on": "always"},
+    "toi": {"answer": ["lettes", "ture"], "on": "always"},
     "oui": {"answer": "stiti", "on": "always"},
     "stiti": {"answer": "oui", "on": "always"},
     "feur": {"answer": "cristopheur", "on": "always"},
     "kette": {"answer": "cristokette", "on": "always"},
-    "ca" : {"answer": "lope", "on": "always"}
+    "ca" : {"answer": ["lope", "lami"], "on": "always"},
+    "sa" : {"answer": ["lope", "lami"], "on": "always"},
+    "ça" : {"answer": ["lope", "lami"], "on": "always"}
 }
