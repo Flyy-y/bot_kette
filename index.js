@@ -6,8 +6,7 @@ const {
   containsWholeWord,
   startsWithWord,
   endsWithWord,
-  getResponseWord,
-  shuffleArray
+  getResponseWord
 } = require('./utils');
 
 const client = new Client({
@@ -106,12 +105,9 @@ client.on('messageCreate', async (message) => {
   // If we have matches, send a response
   if (matches.length > 0) {
     try {
-      // Shuffle the matches
-      const shuffledMatches = shuffleArray(matches);
-      
       // Join with " + " and add "+ ratio" at the end if there are 3 or more matches
-      let finalResponse = shuffledMatches.join(' + ');
-      if (shuffledMatches.length >= 3) {
+      let finalResponse = matches.join(' + ');
+      if (matches.length >= 3) {
         finalResponse += ' + ratio';
       }
       

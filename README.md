@@ -121,9 +121,10 @@ You can define alternative words that will also trigger the same response:
 When a message contains multiple trigger words:
 
 - The bot will collect all matching responses
-- Responses are randomized and joined with " + "
+- Responses are kept in the same order as they appear in the original message
+- Responses are joined with " + "
 - If there are 3 or more matches, "+ ratio" is added at the end
-- Example: For a message containing "oui c'est quoi ça", the response might be "stiti + feur + lope + ratio"
+- Example: For a message containing "oui c'est quoi ça", the response would be "stiti + feur + lope + ratio"
 
 ### Matching Modes
 

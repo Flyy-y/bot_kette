@@ -2,8 +2,7 @@
 const {
   containsWholeWord,
   startsWithWord,
-  endsWithWord,
-  shuffleArray
+  endsWithWord
 } = require('../utils');
 
 // Mock the discord.js module
@@ -356,14 +355,7 @@ describe('Message handling', () => {
     path.join.mockReturnValue('/mock/path/answerMap.json');
     fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
     
-    // Mock shuffleArray to return the array unchanged for predictable testing
-    jest.mock('../utils', () => {
-      const originalModule = jest.requireActual('../utils');
-      return {
-        ...originalModule,
-        shuffleArray: jest.fn(arr => arr)
-      };
-    });
+    // No need to mock shuffleArray anymore as we're keeping the original order
     
     // Import the index module (which will use our mocks)
     const { Client } = require('discord.js');
