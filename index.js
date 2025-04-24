@@ -48,6 +48,17 @@ function endsWithWord(text, word) {
   return words.length > 0 && words[words.length - 1].toLowerCase() === word.toLowerCase();
 }
 
+function isArray(value) {
+  const rndIndex;
+  if typeof value === array{
+    rndIndex = Math.floor(Math.random() * value.length);
+    return value[rndIndex];
+  }
+  elif{
+    return value;
+  }
+}
+
 client.on('messageCreate', async (message) => {
   // Don't log messages from the bot itself
   if (message.author.bot) return;
@@ -66,7 +77,7 @@ client.on('messageCreate', async (message) => {
   for (const [trigger, config] of Object.entries(answerMap)) {
     // Get the matching mode and answer from the config
     const matchMode = config.on || 'always';
-    const response = config.answer;
+    const response = isArray(config.answer);
     
     let isMatch = false;
     
