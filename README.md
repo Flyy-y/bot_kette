@@ -163,6 +163,8 @@ This repository includes GitHub Actions workflows that automatically:
 - Builds a Docker test image
 - Runs all tests inside the Docker container
 - Generates and uploads test coverage reports
+- Automatically comments on PRs with test results if tests fail
+- Prevents Docker image building if tests fail
 - Runs on every push to main and add-unit-tests branches, pull requests to main, and manual triggering
 
 ### 2. Docker Publish Workflow
