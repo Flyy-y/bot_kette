@@ -1,13 +1,13 @@
 {
     "name": "bot_kette",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "A Discord bot that logs all messages to the console",
     "main": "index.js",
     "scripts": {
       "start": "node index.js",
       "test": "jest",
       "test:coverage": "jest --coverage",
-      "build": "ncc build index.js -o dist"
+      "build": "ncc build index.js -m -o dist"
     },
     "dependencies": {
       "discord.js": "^14.18.0"
