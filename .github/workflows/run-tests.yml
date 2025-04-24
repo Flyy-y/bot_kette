@@ -1,0 +1,135 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "main", "add-unit-tests" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  test-with-docker:
+    runs-on: ubuntu-latest
+    outputs:
+      test_outcome: ${{ steps.test_outcome.outputs.status }}
+      test_results: ${{ steps.test_outcome.outputs.results }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build and run test Docker image
+      - name: Build and run test Docker image
+        id: run_tests
+        run: |
+          docker build -t bot_kette_test -f Dockerfile.test .
+          docker run --name test-container bot_kette_test > test_output.txt || echo "Tests failed" >> test_output.txt
+        continue-on-error: true
+      
+      # Extract test results and coverage
+      - name: Extract test coverage
+        run: |
+          docker cp test-container:/app/coverage ./coverage
+          docker rm test-container
+        continue-on-error: true
+
+      # Upload coverage report
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+        continue-on-error: true
+        
+      # Determine test outcome and save results
+      - name: Determine test outcome
+        id: test_outcome
+        run: |
+          if grep -q "FAIL" test_output.txt; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            TEST_RESULTS=$(cat test_output.txt)
+            TEST_RESULTS="${TEST_RESULTS//'%'/'%25'}"
+            TEST_RESULTS="${TEST_RESULTS//$'\n'/'%0A'}"
+            TEST_RESULTS="${TEST_RESULTS//$'\r'/'%0D'}"
+            echo "results<<EOF" >> $GITHUB_OUTPUT
+            echo "$TEST_RESULTS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+  # Comment on PR if tests fail
+  comment-on-pr:
+    needs: test-with-docker
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && needs.test-with-docker.outputs.test_outcome == 'failure'
+    
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const testResults = `### ❌ Tests Failed
+
+            \`\`\`
+            ${{ needs.test-with-docker.outputs.test_results }}
+            \`\`\`
+
+            Please fix the failing tests before merging this PR.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: testResults
+            });
+
+  # Build the main Docker image
+  build-docker:
+    needs: test-with-docker
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/add-unit-tests') && needs.test-with-docker.outputs.test_outcome != 'failure'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Extract version from package.json
+      - name: Extract version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+          
+          # Extract major version (e.g., "1" from "1.1.1")
+          MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_ENV
+          echo "Major version: $MAJOR_VERSION"
+          
+          # Convert repository name to lowercase for Docker compatibility
+          REPO_LOWERCASE=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LOWERCASE=$REPO_LOWERCASE" >> $GITHUB_ENV
+          echo "Repository name (lowercase): $REPO_LOWERCASE"
+
+      # Build Docker image (but don't push)
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: |
+            bot_kette:latest
+            bot_kette:${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
