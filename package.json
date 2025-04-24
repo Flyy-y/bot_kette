@@ -1,19 +1,21 @@
 {
     "name": "bot_kette",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "A Discord bot that logs all messages to the console",
     "main": "index.js",
     "scripts": {
       "start": "node index.js",
       "test": "jest",
-      "test:coverage": "jest --coverage"
+      "test:coverage": "jest --coverage",
+      "build": "ncc build index.js -o dist"
     },
     "dependencies": {
       "discord.js": "^14.18.0"
     },
     "devDependencies": {
       "jest": "^29.7.0",
-      "@types/jest": "^29.5.14"
+      "@types/jest": "^29.5.14",
+      "@vercel/ncc": "^0.38.1"
     },
     "engines": {
       "node": ">=22.0.0"
