@@ -2,7 +2,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const { containsWholeWord, startsWithWord, endsWithWord } = require('./utils');
+const { containsWholeWord, startsWithWord, endsWithWord, getResponseWord } = require('./utils');
 
 const client = new Client({
   intents: [
@@ -49,7 +49,7 @@ client.on('messageCreate', async (message) => {
   for (const [trigger, config] of Object.entries(answerMap)) {
     // Get the matching mode and answer from the config
     const matchMode = config.on || 'always';
-    const response = config.answer;
+    const response = getResponseWord(config.answer);
     
     let isMatch = false;
     
