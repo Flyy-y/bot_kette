@@ -1,5 +1,5 @@
 {
-    "quoi": {"answer": "feur", "on": "always"},
+    "quoi": {"answer": ["feur", "feuse", "fure", "coubeh"], "on": "always"},
     "qui": {"answer": "kette", "on": "always"},
     "toi": {"answer": "lettes", "on": "always"},
     "oui": {"answer": "stiti", "on": "always"},
