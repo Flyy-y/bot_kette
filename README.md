@@ -92,9 +92,39 @@ The bot uses an `answerMap.json` file to configure trigger words and responses. 
 {
   "trigger1": {"answer": "response1", "on": "endsWith"},
   "trigger2": {"answer": "response2", "on": "startsWith"},
-  "trigger3": {"answer": "response3", "on": "always"}
+  "trigger3": {"answer": "response3", "on": "always"},
+  "trigger4": {"answer": ["response4a", "response4b"], "on": "always", "secondaryMatches": ["alt1", "alt2"]}
 }
 ```
+
+### Response Types
+
+The bot supports both single responses and arrays of possible responses:
+
+- **Single Response**: Provide a string as the `answer` value
+  - Example: `"trigger": {"answer": "response", "on": "always"}`
+
+- **Multiple Responses**: Provide an array of strings as the `answer` value
+  - Example: `"trigger": {"answer": ["response1", "response2", "response3"], "on": "always"}`
+  - When triggered, the bot will randomly select one of the responses
+
+### Secondary Matches
+
+You can define alternative words that will also trigger the same response:
+
+- Use the `secondaryMatches` key with an array of alternative trigger words
+- Example: `"ca": {"answer": "lope", "on": "always", "secondaryMatches": ["sa", "ça"]}`
+- This will trigger the same response for "ca", "sa", or "ça"
+
+### Multiple Matches Handling
+
+When a message contains multiple trigger words:
+
+- The bot will collect all matching responses
+- Responses are kept in the same order as they appear in the original message
+- Responses are joined with " + "
+- If there are 3 or more matches, "+ ratio" is added at the end
+- Example: For a message containing "oui c'est quoi ça", the response would be "stiti + feur + lope + ratio"
 
 ### Matching Modes
 
@@ -110,6 +140,15 @@ The bot supports three different matching modes:
   - Example: With `"thanks": {"answer": "you're welcome", "on": "always"}`, the message "thanks for your help" will trigger the response, but "thanksgiving" will not
 
 The bot only checks for whole words, so partial matches like "jouir" will not trigger the "oui" response.
+
+### Accent Handling
+
+The bot automatically removes accents from words before matching:
+
+- Accented characters are normalized to their non-accented equivalents
+- For example, "ça" will match "ca" and vice versa
+- This works for all matching modes (always, startsWith, endsWith)
+- Example: With `"ca": {"answer": "lope", "on": "always"}`, the message "ça va bien" will trigger the response
 
 ## Testing
 

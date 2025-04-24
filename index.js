@@ -2,7 +2,12 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const { containsWholeWord, startsWithWord, endsWithWord, getResponseWord } = require('./utils');
+const {
+  containsWholeWord,
+  startsWithWord,
+  endsWithWord,
+  getResponseWord
+} = require('./utils');
 
 const client = new Client({
   intents: [
@@ -45,14 +50,15 @@ client.on('messageCreate', async (message) => {
   }
 
   const messageContent = message.content;
+  const matches = []; // Array to collect all matches
   
   for (const [trigger, config] of Object.entries(answerMap)) {
     // Get the matching mode and answer from the config
     const matchMode = config.on || 'always';
-    const response = getResponseWord(config.answer);
     
     let isMatch = false;
     
+    // Check primary trigger
     switch (matchMode) {
       case 'startsWith':
         isMatch = startsWithWord(messageContent, trigger);
@@ -66,14 +72,48 @@ client.on('messageCreate', async (message) => {
         break;
     }
     
-    if (isMatch) {
-      console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): "${response}"`);
-      try {
-        await message.reply(response);
-      } catch (error) {
-        console.error('Error sending reply:', error);
+    // Check secondary matches if available
+    if (!isMatch && config.secondaryMatches && Array.isArray(config.secondaryMatches)) {
+      for (const secondaryTrigger of config.secondaryMatches) {
+        switch (matchMode) {
+          case 'startsWith':
+            isMatch = startsWithWord(messageContent, secondaryTrigger);
+            break;
+          case 'endsWith':
+            isMatch = endsWithWord(messageContent, secondaryTrigger);
+            break;
+          case 'always':
+          default:
+            isMatch = containsWholeWord(messageContent, secondaryTrigger);
+            break;
+        }
+        
+        if (isMatch) break; // Exit the loop if we found a match
       }
-      break; // Only reply with the first match
+    }
+    
+    if (isMatch) {
+      // Get a random response for this match
+      const response = getResponseWord(config.answer);
+      console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): "${response}"`);
+      
+      // Add to matches array
+      matches.push(response);
+    }
+  }
+  
+  // If we have matches, send a response
+  if (matches.length > 0) {
+    try {
+      // Join with " + " and add "+ ratio" at the end if there are 3 or more matches
+      let finalResponse = matches.join(' + ');
+      if (matches.length >= 3) {
+        finalResponse += ' + ratio';
+      }
+      
+      await message.reply(finalResponse);
+    } catch (error) {
+      console.error('Error sending reply:', error);
     }
   }
 });

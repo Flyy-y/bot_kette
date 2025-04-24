@@ -1,6 +1,6 @@
 {
     "name": "bot_kette",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "description": "A Discord bot that logs all messages to the console",
     "main": "index.js",
     "scripts": {

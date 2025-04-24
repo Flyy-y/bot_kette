@@ -2,14 +2,27 @@
 // Utility functions for string matching
 
 /**
+ * Removes accents from a string
+ * @param {string} str - The string to remove accents from
+ * @returns {string} - The string without accents
+ */
+function removeAccents(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Checks if a string contains a whole word
  * @param {string} text - The text to search in
  * @param {string} word - The word to search for
  * @returns {boolean} - True if the text contains the whole word
  */
 function containsWholeWord(text, word) {
-  const regex = new RegExp(`\\b${word}\\b`, 'i');
-  return regex.test(text);
+  // Remove accents from both text and word
+  const normalizedText = removeAccents(text);
+  const normalizedWord = removeAccents(word);
+  
+  const regex = new RegExp(`\\b${normalizedWord}\\b`, 'i');
+  return regex.test(normalizedText);
 }
 
 /**
@@ -19,8 +32,12 @@ function containsWholeWord(text, word) {
  * @returns {boolean} - True if the text starts with the word
  */
 function startsWithWord(text, word) {
-  const words = text.trim().split(/\s+/);
-  return words.length > 0 && words[0].toLowerCase() === word.toLowerCase();
+  // Remove accents from both text and word
+  const normalizedText = removeAccents(text);
+  const normalizedWord = removeAccents(word);
+  
+  const words = normalizedText.trim().split(/\s+/);
+  return words.length > 0 && words[0].toLowerCase() === normalizedWord.toLowerCase();
 }
 
 /**
@@ -30,24 +47,47 @@ function startsWithWord(text, word) {
  * @returns {boolean} - True if the text ends with the word
  */
 function endsWithWord(text, word) {
-  const words = text.trim().split(/\s+/);
-  return words.length > 0 && words[words.length - 1].toLowerCase() === word.toLowerCase();
+  // Remove accents from both text and word
+  const normalizedText = removeAccents(text);
+  const normalizedWord = removeAccents(word);
+  
+  const words = normalizedText.trim().split(/\s+/);
+  return words.length > 0 && words[words.length - 1].toLowerCase() === normalizedWord.toLowerCase();
 }
 
-function getResponseWord(text){
-  let index;
-  if(Array.isArray(text)){
-    index = Math.floor(Math.random() * text.length);
-    return text[index]
-  }
-  else{
+/**
+ * Gets a random response from an array or returns the input if it's not an array
+ * @param {string|string[]} text - The response text or array of possible responses
+ * @returns {string} - A randomly selected response
+ */
+function getResponseWord(text) {
+  if (Array.isArray(text)) {
+    const index = Math.floor(Math.random() * text.length);
+    return text[index];
+  } else {
     return text;
   }
 }
 
+/**
+ * Shuffles an array using the Fisher-Yates algorithm
+ * @param {Array} array - The array to shuffle
+ * @returns {Array} - The shuffled array
+ */
+function shuffleArray(array) {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
 module.exports = {
+  removeAccents,
   containsWholeWord,
   startsWithWord,
   endsWithWord,
-  getResponseWord
+  getResponseWord,
+  shuffleArray
 };

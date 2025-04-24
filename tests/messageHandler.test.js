@@ -1,5 +1,9 @@
 // tests/messageHandler.test.js
-const { containsWholeWord, startsWithWord, endsWithWord } = require('../utils');
+const {
+  containsWholeWord,
+  startsWithWord,
+  endsWithWord
+} = require('../utils');
 
 // Mock the discord.js module
 jest.mock('discord.js', () => {
@@ -287,5 +291,166 @@ describe('Message handling', () => {
     expect(console.log).toHaveBeenCalledWith(
       `[ATTACHMENT] ${mockAttachments[1].name}: ${mockAttachments[1].url}`
     );
+  });
+
+  test('should handle secondary matches', async () => {
+    // Mock the answerMap data with secondary matches
+    const mockAnswerMap = {
+      "primary": {
+        "answer": "primaryResponse",
+        "on": "always",
+        "secondaryMatches": ["secondary1", "secondary2"]
+      }
+    };
+    
+    // Set up mocks for fs and path
+    const fs = require('fs');
+    const path = require('path');
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
+    
+    // Mock shuffleArray to return the array unchanged for predictable testing
+    jest.mock('../utils', () => {
+      const originalModule = jest.requireActual('../utils');
+      return {
+        ...originalModule,
+        shuffleArray: jest.fn(arr => arr)
+      };
+    });
+    
+    // Import the index module (which will use our mocks)
+    const { Client } = require('discord.js');
+    require('../index');
+    
+    // Get the message handler (second argument to the 'on' method)
+    const messageHandler = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    // Test with a secondary match
+    const secondaryMessage = {
+      content: 'This message contains secondary1 word',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { size: 0, forEach: jest.fn() },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    await messageHandler(secondaryMessage);
+    expect(secondaryMessage.reply).toHaveBeenCalledWith('primaryResponse');
+  });
+
+  test('should handle multiple matches and join them with + ratio', async () => {
+    // Mock the answerMap data with multiple potential matches
+    const mockAnswerMap = {
+      "match1": {"answer": "response1", "on": "always"},
+      "match2": {"answer": "response2", "on": "always"},
+      "match3": {"answer": "response3", "on": "always"}
+    };
+    
+    // Set up mocks for fs and path
+    const fs = require('fs');
+    const path = require('path');
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
+    
+    // No need to mock shuffleArray anymore as we're keeping the original order
+    
+    // Import the index module (which will use our mocks)
+    const { Client } = require('discord.js');
+    require('../index');
+    
+    // Get the message handler (second argument to the 'on' method)
+    const messageHandler = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    // Create a message with multiple matches (3 or more)
+    const multiMatchMessage = {
+      content: 'This message contains match1, match2, and match3',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { size: 0, forEach: jest.fn() },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    await messageHandler(multiMatchMessage);
+    
+    // Verify that the response contains all matches joined with " + " and ends with "+ ratio" (3+ matches)
+    expect(multiMatchMessage.reply).toHaveBeenCalledWith('response1 + response2 + response3 + ratio');
+    
+    // Test with only 2 matches (should not add "+ ratio")
+    const twoMatchMessage = {
+      content: 'This message contains only match1 and match2',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { size: 0, forEach: jest.fn() },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    // Mock answerMap with only 2 matches
+    const mockAnswerMapTwoMatches = {
+      "match1": {"answer": "response1", "on": "always"},
+      "match2": {"answer": "response2", "on": "always"}
+    };
+    
+    // Update the mock
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMapTwoMatches));
+    
+    // Reset modules to reload with new mock data
+    jest.resetModules();
+    
+    // Reimport the index module
+    require('../index');
+    
+    // Get the message handler again
+    const messageHandlerTwoMatches = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    await messageHandlerTwoMatches(twoMatchMessage);
+    
+    // Verify that the response does NOT include "+ ratio" with only 2 matches
+    expect(twoMatchMessage.reply).toHaveBeenCalledWith('response1 + response2');
+  });
+
+  test('should handle accented characters in matches', async () => {
+    // Mock the answerMap data with accented characters
+    const mockAnswerMap = {
+      "ca": {"answer": "response", "on": "always"}
+    };
+    
+    // Set up mocks for fs and path
+    const fs = require('fs');
+    const path = require('path');
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
+    
+    // Import the index module (which will use our mocks)
+    const { Client } = require('discord.js');
+    require('../index');
+    
+    // Get the message handler (second argument to the 'on' method)
+    const messageHandler = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    // Create a message with accented characters
+    const accentedMessage = {
+      content: 'This message contains ça with accent',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { size: 0, forEach: jest.fn() },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    await messageHandler(accentedMessage);
+    
+    // Verify that the accented character was matched (without ratio since it's only one match)
+    expect(accentedMessage.reply).toHaveBeenCalledWith('response');
   });
 });

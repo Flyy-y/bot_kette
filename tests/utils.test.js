@@ -1,5 +1,28 @@
 // tests/utils.test.js
-const { containsWholeWord, startsWithWord, endsWithWord } = require('../utils');
+const {
+  removeAccents,
+  containsWholeWord,
+  startsWithWord,
+  endsWithWord,
+  getResponseWord,
+  shuffleArray
+} = require('../utils');
+
+describe('removeAccents', () => {
+  test('should remove accents from characters', () => {
+    expect(removeAccents('café')).toBe('cafe');
+    expect(removeAccents('résumé')).toBe('resume');
+    expect(removeAccents('naïve')).toBe('naive');
+    expect(removeAccents('ça va')).toBe('ca va');
+    expect(removeAccents('Crème Brûlée')).toBe('Creme Brulee');
+  });
+
+  test('should leave non-accented characters unchanged', () => {
+    expect(removeAccents('hello')).toBe('hello');
+    expect(removeAccents('123')).toBe('123');
+    expect(removeAccents('hello 123')).toBe('hello 123');
+  });
+});
 
 describe('containsWholeWord', () => {
   test('should return true when text contains the whole word', () => {
@@ -18,6 +41,11 @@ describe('containsWholeWord', () => {
     expect(containsWholeWord('Hello world.', 'world')).toBe(true);
     expect(containsWholeWord('Hello, world!', 'world')).toBe(true);
   });
+
+  test('should handle accented characters', () => {
+    expect(containsWholeWord('Comment ça va', 'ca')).toBe(true);
+    expect(containsWholeWord('Café au lait', 'cafe')).toBe(true);
+  });
 });
 
 describe('startsWithWord', () => {
@@ -32,6 +60,11 @@ describe('startsWithWord', () => {
     expect(startsWithWord('HelloWorld', 'Hello')).toBe(false); // Not a separate word
     expect(startsWithWord('World', 'Hello')).toBe(false);
   });
+
+  test('should handle accented characters', () => {
+    expect(startsWithWord('Ça va bien', 'ca')).toBe(true);
+    expect(startsWithWord('Éléphant rose', 'elephant')).toBe(true);
+  });
 });
 
 describe('endsWithWord', () => {
@@ -45,5 +78,64 @@ describe('endsWithWord', () => {
     expect(endsWithWord('world is big', 'world')).toBe(false);
     expect(endsWithWord('Helloworld', 'world')).toBe(false); // Not a separate word
     expect(endsWithWord('Hello', 'world')).toBe(false);
+  });
+
+  test('should handle accented characters', () => {
+    expect(endsWithWord('Comment ça', 'ca')).toBe(true);
+    expect(endsWithWord('J\'aime le café', 'cafe')).toBe(true);
+  });
+});
+
+describe('getResponseWord', () => {
+  test('should return the input if it is not an array', () => {
+    expect(getResponseWord('hello')).toBe('hello');
+    expect(getResponseWord(123)).toBe(123);
+  });
+
+  test('should return a random element from the array', () => {
+    // Mock Math.random to return a predictable value
+    const originalRandom = Math.random;
+    Math.random = jest.fn().mockReturnValue(0.5);
+
+    const array = ['a', 'b', 'c', 'd'];
+    expect(getResponseWord(array)).toBe('c'); // 0.5 * 4 = 2, so index 2
+
+    // Restore Math.random
+    Math.random = originalRandom;
+  });
+});
+
+describe('shuffleArray', () => {
+  test('should return a new array with the same elements', () => {
+    const original = [1, 2, 3, 4, 5];
+    const shuffled = shuffleArray(original);
+    
+    // Check that the original array is not modified
+    expect(original).toEqual([1, 2, 3, 4, 5]);
+    
+    // Check that the shuffled array has the same elements
+    expect(shuffled).toHaveLength(original.length);
+    expect(shuffled).toEqual(expect.arrayContaining(original));
+  });
+
+  test('should shuffle the array', () => {
+    // Mock Math.random to return predictable values
+    const originalRandom = Math.random;
+    const mockValues = [0.9, 0.1, 0.7, 0.3];
+    let callCount = 0;
+    
+    Math.random = jest.fn().mockImplementation(() => {
+      return mockValues[callCount++ % mockValues.length];
+    });
+
+    const original = [1, 2, 3, 4, 5];
+    const shuffled = shuffleArray(original);
+    
+    // With our mock values, the array should be shuffled in a specific way
+    // The exact order depends on the implementation, but it should be different
+    expect(shuffled).not.toEqual(original);
+    
+    // Restore Math.random
+    Math.random = originalRandom;
   });
 });
