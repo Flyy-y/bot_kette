@@ -1,4 +1,4 @@
-run// tests/messageHandler.test.js
+// tests/messageHandler.test.js
 const {
   containsWholeWord,
   startsWithWord,
