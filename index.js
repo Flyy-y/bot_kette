@@ -95,10 +95,16 @@ client.on('messageCreate', async (message) => {
     if (isMatch) {
       // Get a random response for this match
       const response = getResponseWord(config.answer);
-      console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): "${response}"`);
       
-      // Add to matches array
-      matches.push(response);
+      // Only add to matches if we have a response (probability check passed)
+      if (response !== null) {
+        console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): "${response}"`);
+        
+        // Add to matches array
+        matches.push(response);
+      } else {
+        console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): No response due to probability check`);
+      }
     }
   }
   
