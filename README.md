@@ -13,7 +13,7 @@ A simple Discord bot that logs all messages to the console and can respond to sp
 
 ## Requirements
 
-- Node.js 16.9.0 or higher
+- Node.js 22.0.0 or higher
 - Discord.js v14
 - A Discord bot token
 
@@ -111,18 +111,66 @@ The bot supports three different matching modes:
 
 The bot only checks for whole words, so partial matches like "jouir" will not trigger the "oui" response.
 
+## Testing
+
+This project includes a comprehensive test suite using Jest. The tests cover:
+
+- Utility functions for string matching (containsWholeWord, startsWithWord, endsWithWord)
+- answerMap loading functionality
+- Message handling and response logic
+
+### Running Tests
+
+#### Local Development
+
+```bash
+# Install dependencies including dev dependencies
+npm install
+
+# Run tests
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+#### Using Docker
+
+```bash
+# Build and run tests using Docker
+docker build -t bot_kette_test -f Dockerfile.test .
+docker run bot_kette_test
+```
+
+### Test Status
+
+[![Run Tests](https://github.com/Flyy-y/bot_kette/actions/workflows/run-tests.yml/badge.svg)](https://github.com/Flyy-y/bot_kette/actions/workflows/run-tests.yml)
+
+The current test coverage is:
+
+| File      | % Statements | % Branches | % Functions | % Lines |
+|-----------|--------------|------------|-------------|---------|
+| All files |       85.18  |     87.5   |      50     |   84.9  |
+| index.js  |       82.97  |    83.33   |      20     |   82.6  |
+| utils.js  |        100   |     100    |     100     |    100  |
+
 ## GitHub Actions
 
-This repository includes a GitHub Actions workflow that automatically:
-1. Builds the Docker image
-2. Tags it with the version from package.json
-3. Publishes it to GitHub Container Registry (ghcr.io)
+This repository includes GitHub Actions workflows that automatically:
 
-The workflow runs on:
-- Every push to any branch
-- Pushes of version tags (v*.*.*)
-- Pull requests to the main branch
-- Manual triggering via the GitHub Actions UI
+### 1. Run Tests Workflow
+
+- Builds a Docker test image
+- Runs all tests inside the Docker container
+- Generates and uploads test coverage reports
+- Runs on every push to main and add-unit-tests branches, pull requests to main, and manual triggering
+
+### 2. Docker Publish Workflow
+
+- Builds the Docker image
+- Tags it with the version from package.json
+- Publishes it to GitHub Container Registry (ghcr.io)
+- Runs on every push, version tags (v*.*.*), pull requests to main, and manual triggering
 
 The image will be available at `ghcr.io/Flyy-y/bot_kette:latest` and `ghcr.io/Flyy-y/bot_kette:1.0.0` (or whatever version is in package.json).
 
