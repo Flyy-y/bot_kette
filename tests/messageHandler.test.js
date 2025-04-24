@@ -237,4 +237,55 @@ describe('Message handling', () => {
       expect.any(Error)
     );
   });
+
+  test('should log attachments when message has attachments', async () => {
+    // Mock the answerMap data
+    const mockAnswerMap = {};
+    
+    // Set up mocks for fs and path
+    const fs = require('fs');
+    const path = require('path');
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
+    
+    // Import the index module (which will use our mocks)
+    const { Client } = require('discord.js');
+    require('../index');
+    
+    // Get the message handler (second argument to the 'on' method)
+    const messageHandler = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    // Mock attachments
+    const mockAttachments = [
+      { name: 'image.jpg', url: 'https://example.com/image.jpg' },
+      { name: 'document.pdf', url: 'https://example.com/document.pdf' }
+    ];
+    
+    // Create a mock message object with attachments
+    const mockMessage = {
+      content: 'Here are some attachments',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { 
+        size: mockAttachments.length, 
+        forEach: jest.fn(callback => mockAttachments.forEach(callback))
+      },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    // Call the message handler with our mock message
+    await messageHandler(mockMessage);
+    
+    // Verify that attachments were logged
+    expect(mockMessage.attachments.forEach).toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      `[ATTACHMENT] ${mockAttachments[0].name}: ${mockAttachments[0].url}`
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      `[ATTACHMENT] ${mockAttachments[1].name}: ${mockAttachments[1].url}`
+    );
+  });
 });

@@ -7,9 +7,12 @@ function loadAnswerMap() {
   try {
     const answerMapPath = path.join(__dirname, '..', 'answerMap.json');
     const answerMapData = fs.readFileSync(answerMapPath, 'utf8');
+    console.log('Answer map loaded successfully!');
+    console.log(`Loaded ${Object.keys(JSON.parse(answerMapData)).length} response triggers.`);
     return JSON.parse(answerMapData);
   } catch (error) {
     console.error('Failed to load answer map:', error);
+    console.log('Using empty answer map instead.');
     return {};
   }
 }
@@ -59,6 +62,10 @@ describe('answerMap loading', () => {
     expect(path.join).toHaveBeenCalledWith(expect.any(String), '..', 'answerMap.json');
     expect(fs.readFileSync).toHaveBeenCalledWith('/mock/path/answerMap.json', 'utf8');
     
+    // Verify the success messages were logged
+    expect(console.log).toHaveBeenCalledWith('Answer map loaded successfully!');
+    expect(console.log).toHaveBeenCalledWith('Loaded 2 response triggers.');
+    
     // Verify the result
     expect(result).toEqual(mockAnswerMap);
   });
@@ -80,6 +87,32 @@ describe('answerMap loading', () => {
       'Failed to load answer map:',
       expect.any(Error)
     );
+    
+    // Verify that the fallback message was logged
+    expect(console.log).toHaveBeenCalledWith('Using empty answer map instead.');
+    
+    // Verify the result is an empty object
+    expect(result).toEqual({});
+  });
+
+  test('should handle JSON parse error', () => {
+    // Mock path.join to return a fixed path
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    
+    // Mock fs.readFileSync to return invalid JSON
+    fs.readFileSync.mockReturnValue('{ invalid json }');
+    
+    // Call the function
+    const result = loadAnswerMap();
+    
+    // Verify that console.error was called with the error message
+    expect(console.error).toHaveBeenCalledWith(
+      'Failed to load answer map:',
+      expect.any(Error)
+    );
+    
+    // Verify that the fallback message was logged
+    expect(console.log).toHaveBeenCalledWith('Using empty answer map instead.');
     
     // Verify the result is an empty object
     expect(result).toEqual({});
