@@ -15,7 +15,8 @@
     "devDependencies": {
       "jest": "^29.7.0",
       "@types/jest": "^29.5.14",
-      "@vercel/ncc": "^0.38.1"
+      "@vercel/ncc": "^0.38.1",
+      "jest-html-reporter": "^3.10.2"
     },
     "engines": {
       "node": ">=22.0.0"

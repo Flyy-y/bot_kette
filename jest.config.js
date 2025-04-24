@@ -36,6 +36,25 @@ module.exports = {
     'json',
     'text',
     'lcov',
-    'clover'
+    'clover',
+    ['jest-html-reporter', {
+      pageTitle: 'Test Report',
+      outputPath: './test-report.html',
+      includeFailureMsg: true,
+      includeConsoleLog: true,
+      sort: 'status'
+    }]
+  ],
+  
+  // Use a custom reporter for console output
+  reporters: [
+    'default',
+    ['jest-html-reporter', {
+      pageTitle: 'Test Report',
+      outputPath: './test-report.html',
+      includeFailureMsg: true,
+      includeConsoleLog: true,
+      sort: 'status'
+    }]
   ]
 };
