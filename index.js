@@ -2,6 +2,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
+const { containsWholeWord, startsWithWord, endsWithWord } = require('./utils');
 
 const client = new Client({
   intents: [
@@ -29,24 +30,6 @@ try {
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
-
-// Function to check if a string contains a whole word
-function containsWholeWord(text, word) {
-  const regex = new RegExp(`\\b${word}\\b`, 'i');
-  return regex.test(text);
-}
-
-// Function to check if a string starts with a word
-function startsWithWord(text, word) {
-  const words = text.trim().split(/\s+/);
-  return words.length > 0 && words[0].toLowerCase() === word.toLowerCase();
-}
-
-// Function to check if a string ends with a word
-function endsWithWord(text, word) {
-  const words = text.trim().split(/\s+/);
-  return words.length > 0 && words[words.length - 1].toLowerCase() === word.toLowerCase();
-}
 
 client.on('messageCreate', async (message) => {
   // Don't log messages from the bot itself

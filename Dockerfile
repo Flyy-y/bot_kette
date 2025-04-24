@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -10,6 +10,7 @@ RUN npm install --omit=dev
 
 # Copy source code
 COPY ./index.js /app/index.js
+COPY ./utils.js /app/utils.js
 COPY ./answerMap.json /app/answerMap.json
 
 # Start the bot
