@@ -109,8 +109,11 @@ client.on('messageCreate', async (message) => {
       // Shuffle the matches
       const shuffledMatches = shuffleArray(matches);
       
-      // Join with " + " and add "+ ratio" at the end
-      const finalResponse = shuffledMatches.join(' + ') + ' + ratio';
+      // Join with " + " and add "+ ratio" at the end if there are 3 or more matches
+      let finalResponse = shuffledMatches.join(' + ');
+      if (shuffledMatches.length >= 3) {
+        finalResponse += ' + ratio';
+      }
       
       await message.reply(finalResponse);
     } catch (error) {

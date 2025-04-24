@@ -95,7 +95,7 @@ describe('Message handling', () => {
     await messageHandler(mockMessage);
     
     // Verify that the message was replied to
-    expect(mockMessage.reply).toHaveBeenCalledWith('response + ratio');
+    expect(mockMessage.reply).toHaveBeenCalledWith('response');
     expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining('Triggered response for "test"')
     );
@@ -173,7 +173,7 @@ describe('Message handling', () => {
     };
     
     await messageHandler(startMessage);
-    expect(startMessage.reply).toHaveBeenCalledWith('startResponse + ratio');
+    expect(startMessage.reply).toHaveBeenCalledWith('startResponse');
     
     // Test endsWith mode
     const endMessage = {
@@ -186,7 +186,7 @@ describe('Message handling', () => {
     };
     
     await messageHandler(endMessage);
-    expect(endMessage.reply).toHaveBeenCalledWith('endResponse + ratio');
+    expect(endMessage.reply).toHaveBeenCalledWith('endResponse');
     
     // Test contains mode
     const containMessage = {
@@ -199,7 +199,7 @@ describe('Message handling', () => {
     };
     
     await messageHandler(containMessage);
-    expect(containMessage.reply).toHaveBeenCalledWith('containResponse + ratio');
+    expect(containMessage.reply).toHaveBeenCalledWith('containResponse');
   });
 
   test('should handle error when replying to message', async () => {
@@ -339,7 +339,7 @@ describe('Message handling', () => {
     };
     
     await messageHandler(secondaryMessage);
-    expect(secondaryMessage.reply).toHaveBeenCalledWith('primaryResponse + ratio');
+    expect(secondaryMessage.reply).toHaveBeenCalledWith('primaryResponse');
   });
 
   test('should handle multiple matches and join them with + ratio', async () => {
@@ -374,7 +374,7 @@ describe('Message handling', () => {
       call => call[0] === 'messageCreate'
     )[1];
     
-    // Create a message with multiple matches
+    // Create a message with multiple matches (3 or more)
     const multiMatchMessage = {
       content: 'This message contains match1, match2, and match3',
       author: { bot: false, tag: 'User#1234' },
@@ -386,8 +386,43 @@ describe('Message handling', () => {
     
     await messageHandler(multiMatchMessage);
     
-    // Verify that the response contains all matches joined with " + " and ends with "+ ratio"
+    // Verify that the response contains all matches joined with " + " and ends with "+ ratio" (3+ matches)
     expect(multiMatchMessage.reply).toHaveBeenCalledWith('response1 + response2 + response3 + ratio');
+    
+    // Test with only 2 matches (should not add "+ ratio")
+    const twoMatchMessage = {
+      content: 'This message contains only match1 and match2',
+      author: { bot: false, tag: 'User#1234' },
+      guild: { name: 'Test Guild' },
+      channel: { name: 'test-channel' },
+      attachments: { size: 0, forEach: jest.fn() },
+      reply: jest.fn().mockResolvedValue({})
+    };
+    
+    // Mock answerMap with only 2 matches
+    const mockAnswerMapTwoMatches = {
+      "match1": {"answer": "response1", "on": "always"},
+      "match2": {"answer": "response2", "on": "always"}
+    };
+    
+    // Update the mock
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMapTwoMatches));
+    
+    // Reset modules to reload with new mock data
+    jest.resetModules();
+    
+    // Reimport the index module
+    require('../index');
+    
+    // Get the message handler again
+    const messageHandlerTwoMatches = Client.mock.results[0].value.on.mock.calls.find(
+      call => call[0] === 'messageCreate'
+    )[1];
+    
+    await messageHandlerTwoMatches(twoMatchMessage);
+    
+    // Verify that the response does NOT include "+ ratio" with only 2 matches
+    expect(twoMatchMessage.reply).toHaveBeenCalledWith('response1 + response2');
   });
 
   test('should handle accented characters in matches', async () => {
@@ -423,7 +458,7 @@ describe('Message handling', () => {
     
     await messageHandler(accentedMessage);
     
-    // Verify that the accented character was matched
-    expect(accentedMessage.reply).toHaveBeenCalledWith('response + ratio');
+    // Verify that the accented character was matched (without ratio since it's only one match)
+    expect(accentedMessage.reply).toHaveBeenCalledWith('response');
   });
 });
