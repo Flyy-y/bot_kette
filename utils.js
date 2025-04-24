@@ -34,8 +34,20 @@ function endsWithWord(text, word) {
   return words.length > 0 && words[words.length - 1].toLowerCase() === word.toLowerCase();
 }
 
+function getResponseWord(text){
+  let index;
+  if(Array.isArray(text)){
+    index = Math.floor(Math.random() * text.length);
+    return text[index]
+  }
+  else{
+    return text;
+  }
+}
+
 module.exports = {
   containsWholeWord,
   startsWithWord,
-  endsWithWord
+  endsWithWord,
+  getResponseWord
 };
