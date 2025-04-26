@@ -131,3 +131,4 @@ data/
 
 # Discord token (should be in environment variables, not in repo)
 token.txt
+test-report.html

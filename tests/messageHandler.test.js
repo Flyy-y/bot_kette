@@ -453,4 +453,77 @@ describe('Message handling', () => {
     // Verify that the accented character was matched (without ratio since it's only one match)
     expect(accentedMessage.reply).toHaveBeenCalledWith('response');
   });
+  
+  test('should handle probability-based responses', async () => {
+    // Mock the answerMap data with probability values
+    const mockAnswerMap = {
+      "test": {
+        "answer": [
+          {"response1": 0.6},
+          {"response2": 0.3}
+        ],
+        "on": "always"
+      }
+    };
+    
+    // Set up mocks for fs and path
+    const fs = require('fs');
+    const path = require('path');
+    path.join.mockReturnValue('/mock/path/answerMap.json');
+    fs.readFileSync.mockReturnValue(JSON.stringify(mockAnswerMap));
+    
+    // Save original Math.random
+    const originalRandom = Math.random;
+    
+    try {
+      // Mock Math.random to test different probability scenarios
+      Math.random = jest.fn();
+      
+      // Import the index module (which will use our mocks)
+      const { Client } = require('discord.js');
+      require('../index');
+      
+      // Get the message handler (second argument to the 'on' method)
+      const messageHandler = Client.mock.results[0].value.on.mock.calls.find(
+        call => call[0] === 'messageCreate'
+      )[1];
+      
+      // Create a mock message object
+      const mockMessage = {
+        content: 'This is a test message',
+        author: { bot: false, tag: 'User#1234' },
+        guild: { name: 'Test Guild' },
+        channel: { name: 'test-channel' },
+        attachments: { size: 0, forEach: jest.fn() },
+        reply: jest.fn().mockResolvedValue({})
+      };
+      
+      // Test case 1: Random value within first response probability range
+      Math.random.mockReturnValue(0.3); // 0.3 < 0.6, so should return "response1"
+      await messageHandler(mockMessage);
+      expect(mockMessage.reply).toHaveBeenCalledWith('response1');
+      
+      // Reset the mock
+      mockMessage.reply.mockClear();
+      
+      // Test case 2: Random value within second response probability range
+      Math.random.mockReturnValue(0.7); // 0.6 < 0.7 < 0.9, so should return "response2"
+      await messageHandler(mockMessage);
+      expect(mockMessage.reply).toHaveBeenCalledWith('response2');
+      
+      // Reset the mock
+      mockMessage.reply.mockClear();
+      
+      // Test case 3: Random value outside probability range (no response)
+      Math.random.mockReturnValue(0.95); // 0.95 > 0.9, so should not respond
+      await messageHandler(mockMessage);
+      expect(mockMessage.reply).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('No response due to probability check')
+      );
+    } finally {
+      // Restore Math.random
+      Math.random = originalRandom;
+    }
+  });
 });

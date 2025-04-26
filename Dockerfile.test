@@ -8,6 +8,7 @@ COPY package*.json jest.config.js ./
 
 # Install all dependencies including dev dependencies
 RUN npm ci && \
+    npm install jest-html-reporter && \
     npm cache clean --force
 
 # Test stage - using Alpine with Node installed

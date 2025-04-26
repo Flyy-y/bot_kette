@@ -6,7 +6,9 @@ const {
   containsWholeWord,
   startsWithWord,
   endsWithWord,
-  getResponseWord
+  getResponseWord,
+  removeAccents,
+  getRandomDelay
 } = require('./utils');
 
 const client = new Client({
@@ -50,25 +52,45 @@ client.on('messageCreate', async (message) => {
   }
 
   const messageContent = message.content;
-  const matches = []; // Array to collect all matches
+  const matchesWithPositions = []; // Array to collect all matches with their positions
   
   for (const [trigger, config] of Object.entries(answerMap)) {
     // Get the matching mode and answer from the config
     const matchMode = config.on || 'always';
     
     let isMatch = false;
+    let matchedTrigger = trigger;
+    let position = -1;
     
     // Check primary trigger
     switch (matchMode) {
       case 'startsWith':
         isMatch = startsWithWord(messageContent, trigger);
+        if (isMatch) {
+          position = 0; // Always at the start
+        }
         break;
       case 'endsWith':
         isMatch = endsWithWord(messageContent, trigger);
+        if (isMatch) {
+          // Find the position of the last word
+          const words = messageContent.trim().split(/\s+/);
+          position = messageContent.length - words[words.length - 1].length;
+        }
         break;
       case 'always':
       default:
         isMatch = containsWholeWord(messageContent, trigger);
+        if (isMatch) {
+          // Find the position of the trigger in the message
+          const normalizedText = removeAccents(messageContent.toLowerCase());
+          const normalizedTrigger = removeAccents(trigger.toLowerCase());
+          const regex = new RegExp(`\\b${normalizedTrigger}\\b`, 'i');
+          const match = regex.exec(normalizedText);
+          if (match) {
+            position = match.index;
+          }
+        }
         break;
     }
     
@@ -78,13 +100,32 @@ client.on('messageCreate', async (message) => {
         switch (matchMode) {
           case 'startsWith':
             isMatch = startsWithWord(messageContent, secondaryTrigger);
+            if (isMatch) {
+              position = 0;
+              matchedTrigger = secondaryTrigger;
+            }
             break;
           case 'endsWith':
             isMatch = endsWithWord(messageContent, secondaryTrigger);
+            if (isMatch) {
+              const words = messageContent.trim().split(/\s+/);
+              position = messageContent.length - words[words.length - 1].length;
+              matchedTrigger = secondaryTrigger;
+            }
             break;
           case 'always':
           default:
             isMatch = containsWholeWord(messageContent, secondaryTrigger);
+            if (isMatch) {
+              const normalizedText = removeAccents(messageContent.toLowerCase());
+              const normalizedTrigger = removeAccents(secondaryTrigger.toLowerCase());
+              const regex = new RegExp(`\\b${normalizedTrigger}\\b`, 'i');
+              const match = regex.exec(normalizedText);
+              if (match) {
+                position = match.index;
+                matchedTrigger = secondaryTrigger;
+              }
+            }
             break;
         }
         
@@ -92,15 +133,31 @@ client.on('messageCreate', async (message) => {
       }
     }
     
-    if (isMatch) {
+    if (isMatch && position !== -1) {
       // Get a random response for this match
       const response = getResponseWord(config.answer);
-      console.log(`Triggered response for "${trigger}" (mode: ${matchMode}): "${response}"`);
       
-      // Add to matches array
-      matches.push(response);
+      // Only add to matches if we have a response (probability check passed)
+      if (response !== null) {
+        console.log(`Triggered response for "${matchedTrigger}" (mode: ${matchMode}): "${response}" at position ${position}`);
+        
+        // Add to matches array with position
+        matchesWithPositions.push({
+          response,
+          position,
+          trigger: matchedTrigger
+        });
+      } else {
+        console.log(`Triggered response for "${matchedTrigger}" (mode: ${matchMode}): No response due to probability check`);
+      }
     }
   }
+  
+  // Sort matches by their position in the original message
+  matchesWithPositions.sort((a, b) => a.position - b.position);
+  
+  // Extract just the responses in the correct order
+  const matches = matchesWithPositions.map(match => match.response);
   
   // If we have matches, send a response
   if (matches.length > 0) {
@@ -110,6 +167,11 @@ client.on('messageCreate', async (message) => {
       if (matches.length >= 3) {
         finalResponse += ' + ratio';
       }
+      
+      // Wait for a random delay before replying
+      console.log('Waiting for random delay before replying...');
+      await getRandomDelay();
+      console.log('Delay finished, sending reply now');
       
       await message.reply(finalResponse);
     } catch (error) {

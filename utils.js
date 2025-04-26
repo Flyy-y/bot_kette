@@ -56,17 +56,42 @@ function endsWithWord(text, word) {
 }
 
 /**
- * Gets a random response from an array or returns the input if it's not an array
- * @param {string|string[]} text - The response text or array of possible responses
- * @returns {string} - A randomly selected response
+ * Gets a random response from an array based on probability or returns the input if it's not an array
+ * @param {string|Array} text - The response text or array of possible responses with probabilities
+ * @returns {string|null} - A randomly selected response or null if no response should be sent
  */
 function getResponseWord(text) {
-  if (Array.isArray(text)) {
-    const index = Math.floor(Math.random() * text.length);
-    return text[index];
-  } else {
+  if (!Array.isArray(text)) {
     return text;
   }
+  
+  // Check if we're dealing with the new format (array of objects with probabilities)
+  const isNewFormat = text.length > 0 && typeof text[0] === 'object' && text[0] !== null;
+  
+  if (!isNewFormat) {
+    // Handle old format (array of strings)
+    const index = Math.floor(Math.random() * text.length);
+    return text[index];
+  }
+  
+  // Handle new format with probabilities
+  const random = Math.random(); // Random number between 0 and 1
+  let cumulativeProbability = 0;
+  
+  for (const item of text) {
+    // Get the first key-value pair from the object
+    const [response, probability] = Object.entries(item)[0];
+    
+    cumulativeProbability += probability;
+    
+    if (random < cumulativeProbability) {
+      return response;
+    }
+  }
+  
+  // If the total probability is less than 1 and our random number is greater,
+  // return null to indicate no response should be sent
+  return null;
 }
 
 /**
@@ -83,11 +108,42 @@ function shuffleArray(array) {
   return newArray;
 }
 
+/**
+ * Returns a promise that resolves after a random delay between 0 and maxMinutes
+ * Skips delay when running in a test environment
+ * @param {number} maxMinutes - The maximum delay in minutes (default: 30)
+ * @param {boolean} isTest - Whether we're running in a test environment (default: auto-detect)
+ * @returns {Promise} - A promise that resolves after the random delay
+ */
+function getRandomDelay(maxMinutes = 30, isTest = undefined) {
+  // Auto-detect test environment if not specified
+  if (isTest === undefined) {
+    // Check for Jest or other test environment indicators
+    isTest = typeof jest !== 'undefined' || process.env.NODE_ENV === 'test';
+  }
+  
+  // Skip delay in test environment
+  if (isTest) {
+    console.log('Test environment detected, skipping random delay');
+    return Promise.resolve();
+  }
+  
+  // Convert minutes to milliseconds
+  const maxDelayMs = maxMinutes * 60 * 1000;
+  
+  // Generate a random delay between 0 and maxDelayMs
+  const delayMs = Math.floor(Math.random() * maxDelayMs);
+  
+  // Return a promise that resolves after the delay
+  return new Promise(resolve => setTimeout(resolve, delayMs));
+}
+
 module.exports = {
   removeAccents,
   containsWholeWord,
   startsWithWord,
   endsWithWord,
   getResponseWord,
-  shuffleArray
+  shuffleArray,
+  getRandomDelay
 };

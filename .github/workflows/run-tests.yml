@@ -7,9 +7,16 @@ on:
     branches: [ "*" ]
   workflow_dispatch:  # Allow manual triggering
 
+# Default permissions for all jobs
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test-with-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       test_outcome: ${{ steps.test_outcome.outputs.status }}
       test_results: ${{ steps.test_outcome.outputs.results }}
@@ -31,9 +38,10 @@ jobs:
         continue-on-error: true
       
       # Extract test results and coverage
-      - name: Extract test coverage
+      - name: Extract test results and coverage
         run: |
           docker cp test-container:/app/coverage ./coverage
+          docker cp test-container:/app/test-report.html ./test-report.html
           docker rm test-container
         continue-on-error: true
 
@@ -46,28 +54,63 @@ jobs:
           retention-days: 7
         continue-on-error: true
         
+      # Upload HTML test report
+      - name: Upload HTML test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.html
+          retention-days: 7
+        continue-on-error: true
+        
       # Determine test outcome and save results
       - name: Determine test outcome
         id: test_outcome
         run: |
+          # Check if tests failed
           if grep -q "FAIL" test_output.txt; then
             echo "status=failure" >> $GITHUB_OUTPUT
+            
+            # Extract and format test results
             TEST_RESULTS=$(cat test_output.txt)
+            
+            # Add color formatting for better readability
+            TEST_RESULTS=$(echo "$TEST_RESULTS" | sed 's/PASS/✅ PASS/g' | sed 's/FAIL/❌ FAIL/g')
+            
+            # Escape special characters for GitHub Actions
             TEST_RESULTS="${TEST_RESULTS//'%'/'%25'}"
             TEST_RESULTS="${TEST_RESULTS//$'\n'/'%0A'}"
             TEST_RESULTS="${TEST_RESULTS//$'\r'/'%0D'}"
+            
+            # Output the results
             echo "results<<EOF" >> $GITHUB_OUTPUT
             echo "$TEST_RESULTS" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "status=success" >> $GITHUB_OUTPUT
+            
+            # Even for success, provide the output
+            TEST_RESULTS=$(cat test_output.txt)
+            TEST_RESULTS=$(echo "$TEST_RESULTS" | sed 's/PASS/✅ PASS/g')
+            
+            # Escape special characters for GitHub Actions
+            TEST_RESULTS="${TEST_RESULTS//'%'/'%25'}"
+            TEST_RESULTS="${TEST_RESULTS//$'\n'/'%0A'}"
+            TEST_RESULTS="${TEST_RESULTS//$'\r'/'%0D'}"
+            
+            # Output the results
+            echo "results<<EOF" >> $GITHUB_OUTPUT
+            echo "$TEST_RESULTS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           fi
 
-  # Comment on PR if tests fail
+  # Comment on PR with test results
   comment-on-pr:
     needs: test-with-docker
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && needs.test-with-docker.outputs.test_outcome == 'failure'
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
     
     steps:
       - name: Comment on PR
@@ -75,19 +118,61 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const testResults = `### ❌ Tests Failed
-
+            // Format the test results with better styling
+            const rawResults = '${{ needs.test-with-docker.outputs.test_results }}';
+            const testStatus = '${{ needs.test-with-docker.outputs.test_outcome }}';
+            const isSuccess = testStatus === 'success';
+            
+            // Create header based on test status
+            let formattedResults = isSuccess
+              ? `### ✅ All Tests Passed Successfully\n\n`
+              : `### ❌ Tests Failed\n\n`;
+            
+            // Extract test summary information if available
+            const testSummaryMatch = rawResults.match(/Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total/);
+            
+            if (testSummaryMatch) {
+              const [_, failed, passed, total] = testSummaryMatch;
+              formattedResults += `### Test Summary\n\n`;
+              formattedResults += `| Status | Count |\n`;
+              formattedResults += `| ------ | ----- |\n`;
+              
+              if (!isSuccess) {
+                formattedResults += `| ❌ Failed | ${failed} |\n`;
+              }
+              
+              formattedResults += `| ✅ Passed | ${passed} |\n`;
+              formattedResults += `| 🔢 Total | ${total} |\n\n`;
+            }
+            
+            // Add the full test output in a collapsible section
+            formattedResults += `<details>
+            <summary>📋 View Full Test Output</summary>
+            
             \`\`\`
-            ${{ needs.test-with-docker.outputs.test_results }}
+            ${rawResults}
             \`\`\`
-
-            Please fix the failing tests before merging this PR.`;
+            </details>
+            
+            `;
+            
+            // Add link to test report artifact
+            formattedResults += `### 📊 Test Reports\n\n`;
+            formattedResults += `- [HTML Test Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
+            formattedResults += `- [Coverage Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n`;
+            
+            // Add message based on test status
+            if (!isSuccess) {
+              formattedResults += `Please fix the failing tests before merging this PR.`;
+            } else {
+              formattedResults += `All tests are passing! This PR is ready for review.`;
+            }
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: testResults
+              body: formattedResults
             });
 
   # Build the main Docker image

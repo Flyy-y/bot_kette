@@ -5,7 +5,8 @@ const {
   startsWithWord,
   endsWithWord,
   getResponseWord,
-  shuffleArray
+  shuffleArray,
+  getRandomDelay
 } = require('../utils');
 
 describe('removeAccents', () => {
@@ -87,21 +88,69 @@ describe('endsWithWord', () => {
 });
 
 describe('getResponseWord', () => {
+  // Save original Math.random
+  const originalRandom = Math.random;
+  
+  beforeEach(() => {
+    // Reset Math.random mock before each test
+    Math.random = jest.fn();
+  });
+  
+  afterEach(() => {
+    // Restore Math.random after each test
+    Math.random = originalRandom;
+  });
+
   test('should return the input if it is not an array', () => {
     expect(getResponseWord('hello')).toBe('hello');
     expect(getResponseWord(123)).toBe(123);
   });
 
-  test('should return a random element from the array', () => {
+  test('should return a random element from the array (old format)', () => {
     // Mock Math.random to return a predictable value
-    const originalRandom = Math.random;
-    Math.random = jest.fn().mockReturnValue(0.5);
+    Math.random.mockReturnValue(0.5);
 
     const array = ['a', 'b', 'c', 'd'];
     expect(getResponseWord(array)).toBe('c'); // 0.5 * 4 = 2, so index 2
-
-    // Restore Math.random
-    Math.random = originalRandom;
+  });
+  
+  test('should handle new format with probabilities and select based on probability', () => {
+    // Test cases with different random values
+    const testCases = [
+      { random: 0.1, expected: 'feur' },    // 0.1 < 0.4, so first item
+      { random: 0.5, expected: 'feuse' },   // 0.4 < 0.5 < 0.7, so second item
+      { random: 0.8, expected: 'fure' },    // 0.7 < 0.8 < 0.9, so third item
+      { random: 0.95, expected: 'coubeh' }, // 0.9 < 0.95 < 1.0, so fourth item
+    ];
+    
+    const answerArray = [
+      { "feur": 0.4 },
+      { "feuse": 0.3 },
+      { "fure": 0.2 },
+      { "coubeh": 0.1 }
+    ];
+    
+    for (const { random, expected } of testCases) {
+      Math.random.mockReturnValue(random);
+      expect(getResponseWord(answerArray)).toBe(expected);
+    }
+  });
+  
+  test('should return null when probability check fails', () => {
+    // Set up an answer array with total probability less than 1
+    const answerArray = [
+      { "response1": 0.3 },
+      { "response2": 0.2 }
+    ];
+    // Total probability is 0.5, so if random > 0.5, should return null
+    
+    // Test with random value greater than total probability
+    Math.random.mockReturnValue(0.6);
+    expect(getResponseWord(answerArray)).toBeNull();
+    
+    // Test with random value within probability range
+    Math.random.mockReturnValue(0.2);
+    expect(getResponseWord(answerArray)).toBe("response1");
   });
 });
 
@@ -137,5 +186,88 @@ describe('shuffleArray', () => {
     
     // Restore Math.random
     Math.random = originalRandom;
+  });
+});
+
+describe('getRandomDelay', () => {
+  // Save original setTimeout and Math.random
+  const originalSetTimeout = global.setTimeout;
+  const originalRandom = Math.random;
+  const originalConsoleLog = console.log;
+  
+  beforeEach(() => {
+    // Mock setTimeout to execute immediately
+    global.setTimeout = jest.fn((callback) => {
+      callback();
+      return 123; // Return a timeout ID
+    });
+    
+    // Mock Math.random
+    Math.random = jest.fn();
+    
+    // Mock console.log
+    console.log = jest.fn();
+  });
+  
+  afterEach(() => {
+    // Restore original functions
+    global.setTimeout = originalSetTimeout;
+    Math.random = originalRandom;
+    console.log = originalConsoleLog;
+  });
+  
+  test('should return a Promise', () => {
+    const result = getRandomDelay();
+    expect(result).toBeInstanceOf(Promise);
+  });
+  
+  test('should skip delay in test environment', async () => {
+    // The test should automatically detect it's running in Jest
+    await getRandomDelay();
+    
+    // setTimeout should not be called in test environment
+    expect(setTimeout).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith('Test environment detected, skipping random delay');
+  });
+  
+  test('should use setTimeout with a random delay when isTest is false', async () => {
+    // Mock Math.random to return 0.5
+    Math.random.mockReturnValue(0.5);
+    
+    // Call the function with isTest explicitly set to false
+    await getRandomDelay(30, false);
+    
+    // Check that setTimeout was called with the expected delay
+    // 0.5 * 30 minutes * 60 seconds * 1000 ms = 900000 ms
+    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 900000);
+  });
+  
+  test('should respect the maxMinutes parameter when not in test mode', async () => {
+    // Mock Math.random to return 0.25
+    Math.random.mockReturnValue(0.25);
+    
+    // Call the function with maxMinutes = 10 and isTest = false
+    await getRandomDelay(10, false);
+    
+    // Check that setTimeout was called with the expected delay
+    // 0.25 * 10 minutes * 60 seconds * 1000 ms = 150000 ms
+    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 150000);
+  });
+  
+  test('should generate delays between 0 and maxMinutes when not in test mode', async () => {
+    // Test with different random values
+    const testCases = [
+      { random: 0, expectedMs: 0 },
+      { random: 0.25, expectedMs: 450000 }, // 0.25 * 30 * 60 * 1000
+      { random: 0.5, expectedMs: 900000 },  // 0.5 * 30 * 60 * 1000
+      { random: 0.75, expectedMs: 1350000 }, // 0.75 * 30 * 60 * 1000
+      { random: 0.999, expectedMs: 1798200 } // 0.999 * 30 * 60 * 1000
+    ];
+    
+    for (const { random, expectedMs } of testCases) {
+      Math.random.mockReturnValue(random);
+      await getRandomDelay(30, false); // Explicitly set isTest to false
+      expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), expectedMs);
+    }
   });
 });
