@@ -108,11 +108,42 @@ function shuffleArray(array) {
   return newArray;
 }
 
+/**
+ * Returns a promise that resolves after a random delay between 0 and maxMinutes
+ * Skips delay when running in a test environment
+ * @param {number} maxMinutes - The maximum delay in minutes (default: 30)
+ * @param {boolean} isTest - Whether we're running in a test environment (default: auto-detect)
+ * @returns {Promise} - A promise that resolves after the random delay
+ */
+function getRandomDelay(maxMinutes = 30, isTest = undefined) {
+  // Auto-detect test environment if not specified
+  if (isTest === undefined) {
+    // Check for Jest or other test environment indicators
+    isTest = typeof jest !== 'undefined' || process.env.NODE_ENV === 'test';
+  }
+  
+  // Skip delay in test environment
+  if (isTest) {
+    console.log('Test environment detected, skipping random delay');
+    return Promise.resolve();
+  }
+  
+  // Convert minutes to milliseconds
+  const maxDelayMs = maxMinutes * 60 * 1000;
+  
+  // Generate a random delay between 0 and maxDelayMs
+  const delayMs = Math.floor(Math.random() * maxDelayMs);
+  
+  // Return a promise that resolves after the delay
+  return new Promise(resolve => setTimeout(resolve, delayMs));
+}
+
 module.exports = {
   removeAccents,
   containsWholeWord,
   startsWithWord,
   endsWithWord,
   getResponseWord,
-  shuffleArray
+  shuffleArray,
+  getRandomDelay
 };
