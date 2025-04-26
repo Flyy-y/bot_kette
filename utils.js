@@ -109,13 +109,14 @@ function shuffleArray(array) {
 }
 
 /**
- * Returns a promise that resolves after a random delay between 0 and maxMinutes
+ * Returns a promise that resolves after a random delay using a Gaussian distribution
+ * The distribution is centered at 0, making shorter delays more likely
  * Skips delay when running in a test environment
- * @param {number} maxMinutes - The maximum delay in minutes (default: 30)
+ * @param {number} maxMinutes - The maximum delay in minutes (default: 60)
  * @param {boolean} isTest - Whether we're running in a test environment (default: auto-detect)
  * @returns {Promise} - A promise that resolves after the random delay
  */
-function getRandomDelay(maxMinutes = 30, isTest = undefined) {
+function getRandomDelay(maxMinutes = 60, isTest = undefined) {
   // Auto-detect test environment if not specified
   if (isTest === undefined) {
     // Check for Jest or other test environment indicators
@@ -128,11 +129,26 @@ function getRandomDelay(maxMinutes = 30, isTest = undefined) {
     return Promise.resolve();
   }
   
+  // Generate a random number from a Gaussian distribution using Box-Muller transform
+  // This generates a random number with mean 0 and standard deviation 1
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  
+  // Scale the distribution to make it more likely to get values closer to 0
+  // We use the absolute value to ensure positive delays
+  // We use a standard deviation of 0.3 to make the distribution narrower
+  const standardDeviation = 0.3;
+  let gaussianValue = Math.abs(z0 * standardDeviation);
+  
+  // Clamp the value between 0 and 1 to ensure it's within our range
+  gaussianValue = Math.min(gaussianValue, 1);
+  
   // Convert minutes to milliseconds
   const maxDelayMs = maxMinutes * 60 * 1000;
   
-  // Generate a random delay between 0 and maxDelayMs
-  const delayMs = Math.floor(Math.random() * maxDelayMs);
+  // Scale the Gaussian value to our desired range
+  const delayMs = Math.floor(gaussianValue * maxDelayMs);
   
   // Return a promise that resolves after the delay
   return new Promise(resolve => setTimeout(resolve, delayMs));
