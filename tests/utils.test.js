@@ -230,44 +230,89 @@ describe('getRandomDelay', () => {
     expect(console.log).toHaveBeenCalledWith('Test environment detected, skipping random delay');
   });
   
-  test('should use setTimeout with a random delay when isTest is false', async () => {
-    // Mock Math.random to return 0.5
-    Math.random.mockReturnValue(0.5);
+  test('should use setTimeout with a Gaussian random delay when isTest is false', async () => {
+    // Mock Math.random to return specific values for the Box-Muller transform
+    // First call for u1, second call for u2
+    Math.random
+      .mockReturnValueOnce(0.5) // u1 = 0.5
+      .mockReturnValueOnce(0.25); // u2 = 0.25
     
     // Call the function with isTest explicitly set to false
-    await getRandomDelay(30, false);
+    await getRandomDelay(60, false);
     
-    // Check that setTimeout was called with the expected delay
-    // 0.5 * 30 minutes * 60 seconds * 1000 ms = 900000 ms
-    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 900000);
+    // Calculate the expected delay based on our mocked values
+    // z0 = sqrt(-2 * ln(0.5)) * cos(2 * PI * 0.25) = sqrt(1.386) * cos(PI/2) = 0
+    // gaussianValue = abs(0 * 0.3) = 0
+    // delayMs = 0 * 60 * 60 * 1000 = 0
+    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 0);
   });
   
   test('should respect the maxMinutes parameter when not in test mode', async () => {
-    // Mock Math.random to return 0.25
-    Math.random.mockReturnValue(0.25);
+    // Mock Math.random to return specific values for the Box-Muller transform
+    Math.random
+      .mockReturnValueOnce(0.1) // u1 = 0.1
+      .mockReturnValueOnce(0); // u2 = 0
     
     // Call the function with maxMinutes = 10 and isTest = false
     await getRandomDelay(10, false);
     
-    // Check that setTimeout was called with the expected delay
-    // 0.25 * 10 minutes * 60 seconds * 1000 ms = 150000 ms
-    expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 150000);
+    // Calculate the expected delay based on our mocked values
+    // z0 = sqrt(-2 * ln(0.1)) * cos(2 * PI * 0) = sqrt(4.605) * cos(0) = 2.146
+    // gaussianValue = abs(2.146 * 0.3) = 0.644
+    // delayMs = 0.644 * 10 * 60 * 1000 = 386400
+    const expectedDelay = Math.floor(0.644 * 10 * 60 * 1000);
+    const actualDelay = setTimeout.mock.calls[0][1];
+    
+    // Allow for small differences in floating-point calculations
+    const tolerance = 10 * 1000; // 10 second tolerance
+    expect(actualDelay).toBeGreaterThanOrEqual(expectedDelay - tolerance);
+    expect(actualDelay).toBeLessThanOrEqual(expectedDelay + tolerance);
   });
   
-  test('should generate delays between 0 and maxMinutes when not in test mode', async () => {
-    // Test with different random values
+  test('should generate delays using Gaussian distribution when not in test mode', async () => {
+    // Test with different random values for the Box-Muller transform
     const testCases = [
-      { random: 0, expectedMs: 0 },
-      { random: 0.25, expectedMs: 450000 }, // 0.25 * 30 * 60 * 1000
-      { random: 0.5, expectedMs: 900000 },  // 0.5 * 30 * 60 * 1000
-      { random: 0.75, expectedMs: 1350000 }, // 0.75 * 30 * 60 * 1000
-      { random: 0.999, expectedMs: 1798200 } // 0.999 * 30 * 60 * 1000
+      {
+        u1: 0.1, u2: 0,
+        // z0 = sqrt(-2 * ln(0.1)) * cos(2 * PI * 0) = sqrt(4.605) * cos(0) = 2.146
+        // gaussianValue = abs(2.146 * 0.3) = 0.644 (clamped to 0.644)
+        expectedFactor: 0.644
+      },
+      {
+        u1: 0.5, u2: 0.25,
+        // z0 = sqrt(-2 * ln(0.5)) * cos(2 * PI * 0.25) = sqrt(1.386) * cos(PI/2) = 0
+        // gaussianValue = abs(0 * 0.3) = 0
+        expectedFactor: 0
+      },
+      {
+        u1: 0.01, u2: 0.5,
+        // z0 = sqrt(-2 * ln(0.01)) * cos(2 * PI * 0.5) = sqrt(9.21) * cos(PI) = -3.035
+        // gaussianValue = abs(-3.035 * 0.3) = 0.911 (clamped to 0.911)
+        expectedFactor: 0.911
+      },
+      {
+        u1: 0.001, u2: 0,
+        // z0 = sqrt(-2 * ln(0.001)) * cos(2 * PI * 0) = sqrt(13.82) * cos(0) = 3.717
+        // gaussianValue = abs(3.717 * 0.3) = 1.115 (clamped to 1)
+        expectedFactor: 1
+      }
     ];
     
-    for (const { random, expectedMs } of testCases) {
-      Math.random.mockReturnValue(random);
-      await getRandomDelay(30, false); // Explicitly set isTest to false
-      expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), expectedMs);
+    for (const { u1, u2, expectedFactor } of testCases) {
+      Math.random
+        .mockReturnValueOnce(u1)
+        .mockReturnValueOnce(u2);
+      
+      const maxMinutes = 60;
+      await getRandomDelay(maxMinutes, false); // Explicitly set isTest to false
+      
+      const expectedMs = Math.floor(expectedFactor * maxMinutes * 60 * 1000);
+      const actualMs = setTimeout.mock.calls[setTimeout.mock.calls.length - 1][1];
+      
+      // Allow for small differences in floating-point calculations
+      const tolerance = 2000; // 2 seconds tolerance
+      expect(actualMs).toBeGreaterThanOrEqual(expectedMs - tolerance);
+      expect(actualMs).toBeLessThanOrEqual(expectedMs + tolerance);
     }
   });
 });

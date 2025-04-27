@@ -13,6 +13,6 @@
     "deux": {"answer": [{"trois": 0.6}], "on": "always", "secondaryMatches": ["de", "deu", "deus"]},
     "un": {"answer": [{"deux": 0.9}], "on": "always", "secondaryMatches": ["eun", "uhne"]},
     "moi": {"answer": [{"sson": 0.4}, {"tié": 0.1}], "on": "always", "secondaryMatches": ["mwa"]},
-    "je": {"answer": [{"di": 0.3}], "on": "always", "secondaryMatches": ["j'", "j"]},
+    "jeu": {"answer": [{"di": 0.3}], "on": "always"},
     "pi": {"answer": [{"scine": 0.8}], "on": "always", "secondaryMatches": ["pis"]}
 }
