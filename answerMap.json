@@ -7,11 +7,10 @@
     "feur": {"answer": [{"cristopheur": 1}], "on": "always"},
     "kette": {"answer": [{"cristokette": 1}], "on": "always"},
     "ca": {"answer": [{"lope": 0.5}, {"lami": 0.3}], "on": "always", "secondaryMatches": ["sa"]},
-    "hein": {"answer": [{"deux": 0.7}], "on": "always", "secondaryMatches": ["un"]},
     "si": {"answer": [{"tron": 0.6}], "on": "always", "secondaryMatches": ["six", "cit", "ci"]},
     "bah": {"answer": [{"nane": 0.7}], "on": "always"},
     "deux": {"answer": [{"trois": 0.6}], "on": "always", "secondaryMatches": ["de", "deu", "deus"]},
-    "un": {"answer": [{"deux": 0.9}], "on": "always", "secondaryMatches": ["eun", "uhne"]},
+    "un": {"answer": [{"deux": 0.9}], "on": "always", "secondaryMatches": ["eun", "uhne", "hein"]},
     "moi": {"answer": [{"sson": 0.4}, {"tié": 0.1}], "on": "always", "secondaryMatches": ["mwa"]},
     "jeu": {"answer": [{"di": 0.3}], "on": "always"},
     "pi": {"answer": [{"scine": 0.8}], "on": "always", "secondaryMatches": ["pis"]}
