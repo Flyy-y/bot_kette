@@ -138,7 +138,7 @@ function getRandomDelay(maxMinutes = 60, isTest = undefined) {
   // Scale the distribution to make it more likely to get values closer to 0
   // We use the absolute value to ensure positive delays
   // We use a standard deviation of 0.3 to make the distribution narrower
-  const standardDeviation = 0.3;
+  const standardDeviation = 0.1;
   let gaussianValue = Math.abs(z0 * standardDeviation);
   
   // Clamp the value between 0 and 1 to ensure it's within our range
